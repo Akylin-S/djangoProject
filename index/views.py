@@ -1,9 +1,12 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader, Template, Context  # 导入loader方法
 from django.shortcuts import render  # 导入render 方法
+from django.urls import reverse
+
+from index.models import Author
 
 
-def test(request):
+def test(request, id):
     t = loader.get_template('test.html')
     html = t.render({'name': 'c语言中文网'})  # 以字典形式传递数据并生成html
     return HttpResponse(html)  # 以 HttpResponse方式响应html
@@ -83,3 +86,91 @@ def test_forloop(request):
 
 def test_url(request):
     return render(request, 'test_url.html')
+
+
+def tag(request):
+    t = Template("""
+    {% load index_tags %}
+    {% addstr_tag 'Django BookStore' %}
+    """)
+    html = t.render(Context())
+    return HttpResponse(html)
+
+
+def in_tag(request):
+    t = Template("""
+       {% load index_tags %}
+       {% add_webname_tag 'C 语言中文网' %}
+
+       """)
+    html = t.render(Context({'varible': 'Hello'}))
+    return HttpResponse(html)
+
+
+def base_html(request):
+    return render(request, 'base.html')
+
+
+def index_html(request):
+    name = 'xiaoming'
+    course = ['python', 'django', 'flask']
+    return render(request, 'base_test.html', locals())
+
+
+def filter_tag(request):
+    t = Template("""
+        {% load index_tags %}
+        <h1>:{{ Web|hello_my_filter }}</h1>
+        """)
+    html = t.render(Context({'Web': 'Web django Django'}))
+    return HttpResponse(html)
+
+
+def redict_url(request):
+    return render(request, 'newtest.html')
+
+
+def test_to_reverse(request):
+    return HttpResponseRedirect(reverse
+                                ('index:detail_hello', current_app=request.resolver_match.namespace))
+
+
+def year_test(request, year):
+    year = int(year)  # 转换整形
+
+
+def num1_view(request, id):
+    pass
+
+
+def num2_view(request, id):
+    pass
+
+
+def num3_view(request, id):
+    pass
+
+
+def BookName(request):
+    # books = Book.objects.raw("select * from index_book")  # 书写sql语句
+    authors = Author.objects.raw("select id from index_author where name= %s", ['Tom'])
+    return render(request, "allbook.html", locals())
+
+
+# 在index/views.py 添加代码
+from django.db.models import Count
+from index.models import Book, PubName
+
+
+def test_annotate(request):
+    # 得到所有出版社的查询集合QuerySet
+    bk_set = Book.objects.values('price')
+    # bk=Book.objects.get(id=1)
+    # print('书名:',bk.title,'出版社是:',bk.pub.pubname)
+    # 根据出版社QuerySet查询分组，出版社和Count的分组聚合查询集合
+    bk_count_set = bk_set.annotate(myCount=Count('price'))  # 返回查询集合
+    for item in bk_count_set:  # 通过外键关联进行查询bk_set.pub.pubname
+        print("价格是:", item['price'], "同等价格书籍数量：", item['myCount'])
+        print(item)
+    return HttpResponse('请在CMD命令行控制台查看结果')
+# 路由配置为忘记:path('annotate/',views.test_annotate)
